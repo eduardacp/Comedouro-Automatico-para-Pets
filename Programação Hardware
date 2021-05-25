@@ -1,0 +1,40 @@
+#include <RTClib.h>               // Inclui a Biblioteca
+#include <Servo.h>
+
+#define SERVO 6
+
+Servo s;
+ 
+RTC_DS1307 rtc;       // Inicia variáveis do RTC
+ 
+int Hor;              // Define variável Hora
+int Min;              // Define variável Minuto
+int Sec;              // Define variável Segundo
+int Data;             // Define variável Data
+ 
+void setup()  {
+  rtc.begin();        // Inicia o módulo RTC
+  
+  //s.attach(SERVO);
+  
+  Serial.begin(9600);
+  Serial.print("Iniciando teste...\n");
+  
+  rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));     // Ajuste Automático da hora e data
+}
+ 
+void loop()   {
+  Hor = rtc.now().hour();       // Verifica a Hora
+  Min = rtc.now().minute();     // Verifica os Minutos
+  Sec = rtc.now().second();     // Verifica os Segundos
+  Data = rtc.now().day();       // Verifica o Dia
+ 
+  // Verifica o horário
+  if ( Hor == 14 &&  Min == 16 && Sec == 00) {
+    Serial.print("Hora de Comer\n");
+    //s.write(180);
+    //delay(2000);
+  }
+   
+  delay(1000);                      // Aguarda 1 segundo e reinicia
+}
