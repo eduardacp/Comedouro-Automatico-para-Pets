@@ -1,24 +1,36 @@
-#include <RTClib.h>               // Inclui a Biblioteca
-#include <Servo.h>
+#include <RTClib.h>               
+#include <Servo.h>                
+#include <Ultrasonic.h>
+#include <SoftwareSerial.h>
 
-#define SERVO 6
+
+#define pino_trigger 4
+#define pino_echo 5
+
+SoftwareSerial serial(10, 11);      // Pinos 10 e 11, como RX e TX, respectivamente
 
 Servo s;
- 
+
 RTC_DS1307 rtc;       // Inicia variáveis do RTC
  
 int Hor;              // Define variável Hora
 int Min;              // Define variável Minuto
 int Sec;              // Define variável Segundo
 int Data;             // Define variável Data
- 
+int i;
+
+String data = "";     // Armazenar dados vindos do Android;
+int counter = 0;      // Incrementado a cada execução do loop principal e transmitido ao Android, condição de conclusão do relógio
+
+Ultrasonic ultrasonic(pino_trigger, pino_echo);
+
 void setup()  {
-  rtc.begin();        // Inicia o módulo RTC
-  
-  //s.attach(SERVO);
-  
+  rtc.begin();                // Inicia o módulo RTC
+  s.attach(9);                // Define que o Servo está conectado a Porta 9
+  s.write(180);               // Comando para posicionar o servo no ângulo especificado
   Serial.begin(9600);
   Serial.print("Iniciando teste...\n");
+ 
   
   rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));     // Ajuste Automático da hora e data
 }
@@ -28,13 +40,27 @@ void loop()   {
   Min = rtc.now().minute();     // Verifica os Minutos
   Sec = rtc.now().second();     // Verifica os Segundos
   Data = rtc.now().day();       // Verifica o Dia
- 
-  // Verifica o horário
-  if ( Hor == 14 &&  Min == 16 && Sec == 00) {
-    Serial.print("Hora de Comer\n");
-    //s.write(180);
-    //delay(2000);
-  }
-   
-  delay(1000);                      // Aguarda 1 segundo e reinicia
+
+  float cmMsec;
+  long microsec = ultrasonic.timing();
+  cmMsec = ultrasonic.convert(microsec, Ultrasonic::CM);
+
+  Serial.print("Distancia em cm: ");
+  Serial.print(cmMsec);
+  Serial.print("\n");
+  delay(1000);
+  if(cmMsec < 25){
+    // Verifica o horário
+      if ( Hor == 15 &&  Min == 39 && Sec == 00) {
+        Serial.print("Hora de Comer\n");
+        s.write(180);
+        delay(500);            //Equivalente a 200gr de ração com grãos pequenos
+        s.write(0);
+      }
+  }else {
+      Serial.print("RESERVATÓRIO ABAIXO DO LIMITE PERMITIDO\n");
+    }
+
+     
+  delay(500);                      // Aguarda 0,5 segundo e reinicia
 }
