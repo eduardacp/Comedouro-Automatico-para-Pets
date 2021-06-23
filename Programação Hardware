@@ -1,4 +1,4 @@
-#include <RTClib.h>               
+#include <DS3231.h>               
 #include <Servo.h>                
 #include <Ultrasonic.h>
 #include <SoftwareSerial.h>
@@ -11,13 +11,21 @@ SoftwareSerial serial(10, 11);      // Pinos 10 e 11, como RX e TX, respectivame
 
 Servo s;
 
-RTC_DS1307 rtc;       // Inicia variáveis do RTC
+DS3231  rtc(SDA, SCL);
+Time t;
  
-int Hor;              // Define variável Hora
-int Min;              // Define variável Minuto
-int Sec;              // Define variável Segundo
-int Data;             // Define variável Data
-int i;
+//parâmetros de horário que serão atualizados
+int horaAtual, minutoAtual;
+
+//parâmetros primeira alimentação
+int horaAlimentacao1, minutoAlimentacao1, demosComida1;
+
+//parâmetros segunda alimentação
+int horaAlimentacao2, minutoAlimentacao2, demosComida2;
+
+//parâmetros terceira alimentação
+int horaAlimentacao3, minutoAlimentacao3, demosComida3;
+
 
 String data = "";     // Armazenar dados vindos do Android;
 int counter = 0;      // Incrementado a cada execução do loop principal e transmitido ao Android, condição de conclusão do relógio
@@ -27,19 +35,43 @@ Ultrasonic ultrasonic(pino_trigger, pino_echo);
 void setup()  {
   rtc.begin();                // Inicia o módulo RTC
   s.attach(9);                // Define que o Servo está conectado a Porta 9
-  s.write(180);               // Comando para posicionar o servo no ângulo especificado
+  s.write(0);               // Comando para posicionar o servo no ângulo especificado
   Serial.begin(9600);
   Serial.print("Iniciando teste...\n");
  
-  
-  rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));     // Ajuste Automático da hora e data
+  //determina o horário da primeira alimentação
+  horaAlimentacao1 = 07; 
+  minutoAlimentacao1 = 30;
+
+  //determina o horário da segunda alimentação
+  horaAlimentacao2 = 13; 
+  minutoAlimentacao2 = 41;
+
+  //determina o horário da terceira alimentação
+  horaAlimentacao3 = 19; 
+  minutoAlimentacao3 = 00;
+
+  //determina o status de alimentação. 0 equivale a não e 1 a sim
+  demosComida1 = 0;   
+  demosComida2 = 0;
+  demosComida3 = 0;
+
+  //As linhas abaixo devem ser descomentadas para configurar o relógio interno. 
+  //Descomente, carregue o código para o arduino, comente novamente e suba o código mais uma vez.
+  /*rtc.setDate(23,6,2021);    // determina a data (dia, mes, ano)
+  rtc.setDOW(WEDNESDAY);     // determina o dia da semana
+  rtc.setTime(13,40,0);     // determina o horário (hora, minuto, segundo)*/
+
 }
+
  
 void loop()   {
-  Hor = rtc.now().hour();       // Verifica a Hora
-  Min = rtc.now().minute();     // Verifica os Minutos
-  Sec = rtc.now().second();     // Verifica os Segundos
-  Data = rtc.now().day();       // Verifica o Dia
+
+  //determina o horário atual
+  t = rtc.getTime();
+  horaAtual = t.hour;
+  minutoAtual = t.min;
+
 
   float cmMsec;
   long microsec = ultrasonic.timing();
@@ -49,18 +81,44 @@ void loop()   {
   Serial.print(cmMsec);
   Serial.print("\n");
   delay(1000);
-  if(cmMsec < 25){
+
+  if(cmMsec <= 20){
     // Verifica o horário
-      if ( Hor == 15 &&  Min == 39 && Sec == 00) {
+      if (horaAtual == horaAlimentacao1 && minutoAtual == minutoAlimentacao1 && demosComida1 == 0) {
         Serial.print("Hora de Comer\n");
         s.write(180);
-        delay(500);            //Equivalente a 200gr de ração com grãos pequenos
+        delay(750);       //Equivalente a 200gr de ração com grãos pequenos
         s.write(0);
+        demosComida1 = 1; //altera status da comida1
       }
-  }else {
-      Serial.print("RESERVATÓRIO ABAIXO DO LIMITE PERMITIDO\n");
+      //verifica se é o horário da segunda alimentação
+      if (horaAtual == horaAlimentacao2 && minutoAtual == minutoAlimentacao2 && demosComida2 == 0 ){
+    
+        Serial.print("Hora de Comer\n");
+        s.write(180);
+        delay(750);       //Equivalente a 200gr de ração com grãos pequenos
+        s.write(0);
+        demosComida2 = 1; //altera status da comida2 
+      }
+      //verifica se é o horário da terceira alimentação
+      if (horaAtual == horaAlimentacao3 && minutoAtual == minutoAlimentacao3 && demosComida3 == 0 ){
+    
+        Serial.print("Hora de Comer\n");
+        s.write(180);
+        delay(750);       //Equivalente a 200gr de ração com grãos pequenos
+        s.write(0);
+        demosComida3 = 1; //altera status da comida2 
+      }
+  }else{
+    Serial.Print("Reservatório abaixo do limite permitido\n");
     }
+  
 
-     
-  delay(500);                      // Aguarda 0,5 segundo e reinicia
+ //meia noite reseta o status de comida do dia 
+  if (horaAtual == 0 && minutoAtual == 0){
+    demosComida1 = 0;
+    demosComida2 = 0; 
+  }
+   
+  delay(500);                        //atualiza monitor serial
 }
